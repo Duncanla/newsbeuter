@@ -11,6 +11,7 @@ regexmanager::regexmanager() {
 	// this creates the entries in the map. we need them there to have the "all" location work.
 	locations["article"];
 	locations["articlelist"];
+	locations["articlelist-focus"];
 	locations["feedlist"];
 }
 
@@ -121,7 +122,8 @@ void regexmanager::handle_action(const std::string& action, const std::vector<st
 			colorstr.append(bgcolor);
 		}
 
-		for (unsigned int i=3; i<params.size(); i++) {
+		unsigned int i=3;
+		while ((i < params.size()) && (params[i] != "|")) {
 			if (params[i] != "default") {
 				if (colorstr.length() > 0)
 					colorstr.append(",");
@@ -130,7 +132,43 @@ void regexmanager::handle_action(const std::string& action, const std::vector<st
 					throw confighandlerexception(utils::strprintf(_("`%s' is not a valid attribute"), params[i].c_str()));
 				colorstr.append(params[i]);
 			}
+			++i;
 		}
+
+		std::string colorstr_focus;
+		if (params[i] == "|") {
+			fgcolor = params[++i];
+			bgcolor = params[++i];
+		}
+		if (fgcolor != "default") {
+			colorstr_focus.append("fg=");
+			if (!utils::is_valid_color(fgcolor))
+				throw confighandlerexception(utils::strprintf(_("`%s' is not a valid color"), fgcolor.c_str()));
+			colorstr_focus.append(fgcolor);
+		}
+		if (bgcolor != "default") {
+			if (colorstr_focus.length() > 0)
+				colorstr_focus.append(",");
+			colorstr_focus.append("bg=");
+			if (!utils::is_valid_color(bgcolor))
+				throw confighandlerexception(utils::strprintf(_("`%s' is not a valid color"), bgcolor.c_str()));
+			colorstr_focus.append(bgcolor);
+		}
+
+		++i;
+		while ((i < params.size()) && (params[i] != "|")) {
+			if (params[i] != "default") {
+				if (colorstr_focus.length() > 0)
+					colorstr_focus.append(",");
+				colorstr_focus.append("attr=");
+				if (!utils::is_valid_attribute(params[i]))
+					throw confighandlerexception(utils::strprintf(_("`%s' is not a valid attribute"), params[i].c_str()));
+				colorstr_focus.append(params[i]);
+			}
+			++i;
+		}
+
+		
 
 		std::shared_ptr<matcher> m(new matcher());
 		if (!m->parse(params[0])) {
@@ -141,6 +179,8 @@ void regexmanager::handle_action(const std::string& action, const std::vector<st
 
 		locations["articlelist"].first.push_back(NULL);
 		locations["articlelist"].second.push_back(colorstr);
+		locations["articlelist-focus"].first.push_back(NULL);
+		locations["articlelist-focus"].second.push_back(colorstr_focus);
 
 		matchers.push_back(std::pair<std::shared_ptr<matcher>, int>(m, pos));
 

@@ -974,13 +974,18 @@ void itemlist_formaction::save_filterpos() {
 void itemlist_formaction::set_regexmanager(regexmanager * r) {
 	rxman = r;
 	std::vector<std::string>& attrs = r->get_attrs("articlelist");
+	std::vector<std::string>& attrs_focus = r->get_attrs("articlelist-focus");
+	auto ait = attrs.begin();
+	auto afit = attrs_focus.begin();
 	unsigned int i=0;
 	std::string attrstr;
-	for (auto attribute : attrs) {
-		attrstr.append(utils::strprintf("@style_%u_normal:%s ", i, attribute.c_str()));
-		attrstr.append(utils::strprintf("@style_%u_focus:%s ", i, attribute.c_str()));
-		i++;
+	while ((ait != attrs.end()) && (afit != attrs_focus.end())) {
+		attrstr.append(utils::strprintf("@style_%u_normal:%s ", i, ait->c_str()));
+		attrstr.append(utils::strprintf("@style_%u_focus:%s ", i, afit->c_str()));
+		++ait;
+		++afit;
 	}
+
 	std::string textview = utils::strprintf("{list[items] .expand:vh style_normal[listnormal]: style_focus[listfocus]:fg=yellow,bg=blue,attr=bold pos_name[itemposname]: pos[itempos]:0 %s richtext:1}", attrstr.c_str());
 	f->modify("items", "replace", textview);
 }
