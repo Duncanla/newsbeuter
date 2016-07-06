@@ -315,6 +315,22 @@ rsspp::feed ttrss_api::fetch_feed(const std::string& id) {
 			item.labels.push_back("ttrss:read");
 		}
 
+		json_object_object_get_ex(item_obj, "marked", &node);
+		json_bool starred = json_object_get_boolean(node);
+		if (starred) {
+			item.labels.push_back("ttrss:starred");
+		} else {
+			item.labels.push_back("ttrss:unstarred");
+		}
+
+		json_object_object_get_ex(item_obj, "published", &node);
+		json_bool published = json_object_get_boolean(node);
+		if (published) {
+			item.labels.push_back("ttrss:published");
+		} else {
+			item.labels.push_back("ttrss:unpublished");
+		}
+
 		json_object_object_get_ex(item_obj, "updated", &node);
 		time_t updated = (time_t)json_object_get_int(node);
 		char rfc822_date[128];
