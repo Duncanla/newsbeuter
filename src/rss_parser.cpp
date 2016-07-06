@@ -257,8 +257,12 @@ void rss_parser::fill_feed_items(std::shared_ptr<rss_feed> feed) {
 	 * we iterate over all items of a feed, create an rss_item object for
 	 * each item, and fill it with the appropriate values from the data structure.
 	 */
+	std::string ttrss_star_flag = cfgcont->get_configvalue("ttrss-flag-star");
+	std::string ttrss_publish_flag = cfgcont->get_configvalue("ttrss-flag-publish");
 	for (auto item : f.items) {
 		std::shared_ptr<rss_item> x(new rss_item(ch));
+
+		x->set_guid(get_guid(item));
 
 		set_item_title(feed, x, item);
 
@@ -299,6 +303,42 @@ void rss_parser::fill_feed_items(std::shared_ptr<rss_feed> feed) {
 				x->set_unread_nowrite(false);
 				x->set_override_unread(true);
 			}
+			if (std::find(start, finish, "ttrss:starred") != finish) {
+				std::string flags = x->flags();
+				if (strchr(flags.c_str(), ttrss_star_flag[0]) == NULL) {
+					flags.append(ttrss_star_flag);
+					x->set_flags(flags);
+				}
+				// LOG(LOG_DEBUG, "rss_parser::fill_feed_items: article title = `%s' STARRED flags: '%s'", x->title().c_str(), x->flags().c_str());
+			}
+			if (std::find(start, finish, "ttrss:unstarred") != finish) {
+				std::string flags = x->flags();
+				size_t p = flags.find(ttrss_star_flag);
+				LOG(LOG_DEBUG, "%s, %d", flags.c_str(), p);
+				if (p != std::string::npos) {
+					flags.erase(p, 1);
+					x->set_flags(flags);
+				}
+				// LOG(LOG_DEBUG, "rss_parser::fill_feed_items: article title = `%s' UNSTARRED flags: '%s'", x->title().c_str(), x->flags().c_str());
+			}
+			if (std::find(start, finish, "ttrss:published") != finish) {
+				std::string flags = x->flags();
+				if (strchr(flags.c_str(), ttrss_publish_flag[0]) == NULL) {
+					flags.append(ttrss_publish_flag);
+					x->set_flags(flags);
+				}
+				LOG(LOG_DEBUG, "rss_parser::fill_feed_items: article title = `%s' PUBLISHED flags: '%s'", x->title().c_str(), x->flags().c_str());
+			}
+			if (std::find(start, finish, "ttrss:unpublished") != finish) {
+				std::string flags = x->flags();
+				size_t p = flags.find(ttrss_publish_flag);
+				LOG(LOG_DEBUG, "%s, %d", flags.c_str(), p);
+				if (p != std::string::npos) {
+					flags.erase(p, 1);
+					x->set_flags(flags);
+				}
+				LOG(LOG_DEBUG, "rss_parser::fill_feed_items: article title = `%s' UNPUBLISHED flags: '%s'", x->title().c_str(), x->flags().c_str());
+			}
 			if (std::find(start, finish, "newsblur:unread") != finish) {
 				x->set_unread_nowrite(true);
 				x->set_override_unread(true);
@@ -324,14 +364,14 @@ void rss_parser::fill_feed_items(std::shared_ptr<rss_feed> feed) {
 		else
 			x->set_pubDate(::time(NULL));
 
-		x->set_guid(get_guid(item));
-
 		x->set_base(item.base);
 
 		set_item_enclosure(x, item);
 
-		LOG(LOG_DEBUG, "rss_parser::parse: item title = `%s' link = `%s' pubDate = `%s' (%d) description = `%s'", x->title().c_str(),
-		    x->link().c_str(), x->pubDate().c_str(), x->pubDate_timestamp(), x->description().c_str());
+		x->update_flags();
+
+		LOG(LOG_DEBUG, "rss_parser::parse: item title = `%s' link = `%s' pubDate = `%s' (%d) description = `%s' flag = '%s'", x->title().c_str(),
+		    x->link().c_str(), x->pubDate().c_str(), x->pubDate_timestamp(), x->description().c_str(), x->flags().c_str());
 
 		add_item_to_feed(feed, x);
 	}
